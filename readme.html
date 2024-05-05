@@ -1,0 +1,319 @@
+<html>
+
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=utf-8">
+<meta name=Generator content="Microsoft Word 15 (filtered)">
+<style>
+<!--
+ /* Font Definitions */
+ @font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:OpenSymbol;
+	panose-1:2 11 6 4 2 2 2 2 2 4;}
+@font-face
+	{font-family:"DejaVu Sans";
+	panose-1:2 11 6 4 2 2 2 2 2 4;}
+@font-face
+	{font-family:"Liberation Mono";
+	panose-1:2 11 6 4 2 2 2 2 2 4;}
+@font-face
+	{font-family:"WenQuanYi Zen Hei Sharp";
+	panose-1:2 11 6 4 2 2 2 2 2 4;}
+@font-face
+	{font-family:"Liberation Serif";
+	panose-1:2 11 6 4 2 2 2 2 2 4;}
+@font-face
+	{font-family:"Liberation Sans";
+	panose-1:2 11 6 4 2 2 2 2 2 4;}
+ /* Style Definitions */
+ p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin:0in;
+	text-autospace:ideograph-other;
+	font-size:12.0pt;
+	font-family:"Times New Roman",serif;}
+h2
+	{margin-top:10.0pt;
+	margin-right:0in;
+	margin-bottom:6.0pt;
+	margin-left:0in;
+	page-break-after:avoid;
+	text-autospace:ideograph-other;
+	font-size:14.0pt;
+	font-family:"Liberation Sans",sans-serif;}
+h3
+	{margin-top:7.0pt;
+	margin-right:0in;
+	margin-bottom:6.0pt;
+	margin-left:0in;
+	page-break-after:avoid;
+	text-autospace:ideograph-other;
+	font-size:14.0pt;
+	font-family:"Liberation Sans",sans-serif;}
+p.Textbody, li.Textbody, div.Textbody
+	{mso-style-name:"Text body";
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:6.0pt;
+	margin-left:0in;
+	text-autospace:ideograph-other;
+	font-size:12.0pt;
+	font-family:"Liberation Serif",serif;}
+p.TableContents, li.TableContents, div.TableContents
+	{mso-style-name:"Table Contents";
+	margin:0in;
+	text-autospace:ideograph-other;
+	font-size:12.0pt;
+	font-family:"Liberation Serif",serif;}
+.MsoPapDefault
+	{text-autospace:ideograph-other;}
+ /* Page Definitions */
+ @page WordSection1
+	{size:8.5in 11.0in;
+	margin:.8in 56.7pt 1.4in 56.7pt;}
+div.WordSection1
+	{page:WordSection1;}
+-->
+</style>
+
+</head>
+
+<body lang=EN-US style='word-wrap:break-word'>
+
+<div class=WordSection1>
+
+<h2 align=center style='margin-top:0in;margin-right:0in;margin-bottom:5.75pt;
+margin-left:0in;text-align:center'>Usage Instructions</h2>
+
+<p class=Textbody>&nbsp;</p>
+
+<p class=Textbody style='margin-left:.5in;text-indent:-.5in'>How to use the
+source code from <br>
+Popovic, MA, Carnevale, N, Rozsa, B and Zecevic, D. <br>
+Electrical behaviour of dendritic spines as revealed by voltage imaging. <br>
+Nature Communications 6:8436, 2015. DOI 10.1038/ncomms9436. PMID 26436431.</p>
+
+<p class=Textbody>Compile the mod files by executing</p>
+
+<p class=Textbody>            <span style='font-family:"Liberation Mono"'>nrnivmodl</span></p>
+
+<p class=Textbody>Then execute</p>
+
+<p class=Textbody><span style='font-family:"Liberation Mono"'>            nrngui
+init.hoc</span></p>
+
+<p class=Textbody>This will start NEURON, which will create the model cell and
+present this user interface: </p>
+
+<p class=Textbody align=center style='text-align:center'><img width=498
+height=424 src="readme.fld/image001.jpg"></p>
+
+<p class=Textbody>&nbsp;</p>
+
+<p class=Textbody style='page-break-after:avoid'>The items in the interface are
+(from left to right, top to bottom):</p>
+
+<p class=Textbody>1. NEURON Main Menu panel</p>
+
+<p class=Textbody>2. Graph that shows time course of membrane potential at
+three locations: middle of spine head, proximal end of spine neck (== potential
+at the point in the parent neurite to which the spine neck is attached), and
+root node of the soma (&quot;most proximal point in the soma&quot;).</p>
+
+<p class=Textbody>3. &quot;Controls&quot; panel for specifying model properties
+and performing various analyses.</p>
+
+<p class=Textbody>4. CellBuilder that contains the detailed anatomical
+specification of the model cell. The name of the file that contains this data
+(070502-exp2-zB_noax.ses) is reported at the top of the Controls panel.</p>
+
+<p class=Textbody>5. RunControl panel for launching individual simulation runs.</p>
+
+<p class=Textbody>6. Graph that shows time course of course of current
+delivered by the synapse attached to the spine head (syn.i).</p>
+
+<p class=Textbody>7. PointProcessManagers (PPMs) for: specifying properties of
+the NetStim that activates the synapse; showing the actual location of the
+synapse, and controlling the reversal potential and dynamics of the model
+synapse (an Exp2Syn); Loc[0], which you can use to control where the spine is
+attached.</p>
+
+<p class=Textbody>Notice that each Graph and PPM has a white canvas with a
+little square in its top left corner. The square is called a &quot;menu
+box&quot;.</p>
+
+<h3>To reproduce Fig. 8a</h3>
+
+<p class=Textbody>First, make sure that the cell, synapse, and spine parameters
+in the Controls panel have these values:</p>
+
+<p class=Textbody style='margin-bottom:2.9pt'><b>Cell parameters:</b></p>
+
+<p class=Textbody style='margin-bottom:2.9pt'>            Ra 100 ohm cm</p>
+
+<p class=Textbody style='margin-bottom:2.9pt'>            cm 1 uf/cm2</p>
+
+<p class=Textbody style='margin-bottom:2.9pt'>            g_pas 5e-5 S/cm2</p>
+
+<p class=Textbody>            spine area factor 0</p>
+
+<p class=Textbody>Peak gsyn 0.000291 uS</p>
+
+<p class=Textbody style='margin-bottom:2.9pt'><b>Spine parameters:</b></p>
+
+<p class=Textbody style='margin-bottom:2.9pt'>            Ra 100 ohm cm</p>
+
+<p class=Textbody style='margin-bottom:2.9pt'>            Neck L 1 um</p>
+
+<p class=Textbody>            Neck diam 0.18 um</p>
+
+<p class=Textbody>Use the GUI to change any values that are not correct. When
+the spine parameters are correct, Rspine will be 40.5 megohms.</p>
+
+<table class=MsoNormalTable border=0 cellspacing=0 cellpadding=0 width=665
+ style='border-collapse:collapse'>
+ <tr>
+  <td width=510 valign=top style='width:382.6pt;padding:0in .5pt 0in .5pt'>
+  <p class=Textbody>Next, make sure the spine is attached to dend[3](0.642857).</p>
+  <p class=Textbody>The PointProcessManager (PPM) for Loc[0] should look like
+  this:</p>
+  <p class=Textbody align=center style='text-align:center'><img width=108
+  height=165 id="Picture 1" src="readme.fld/image002.jpg"
+  alt="A screenshot of a computer&#10;&#10;Description automatically generated"></p>
+  <p class=Textbody>Note the position of the blue dot in the basilar field of
+  the cell, and the message just above the PPM's canvas which says</p>
+  <p class=Textbody style='margin-left:.5in'>Loc[0]</p>
+  <p class=Textbody style='margin-left:.5in'>at: dend[3](0.642857)</p>
+  <p class=Textbody>If you see something different, click on the cell image at
+  the correct location and verify that the blue dot is now where it should be.
+  It will be easier to do this if you first make the cell image larger by
+  clicking and dragging the right lower corner of Loc[0]'s PPM down and to the
+  right.</p>
+  </td>
+  <td width=155 valign=top style='width:116.0pt;padding:0in .5pt 0in .5pt'>
+  <p class=Textbody align=right style='text-align:right'>&nbsp;</p>
+  </td>
+ </tr>
+</table>
+
+<p class=Textbody style='page-break-after:avoid'>When the dot is where you want
+it, click on the</p>
+
+<p class=Textbody>            Put spine at the mark</p>
+
+<p class=Textbody>button at the bottom of the Controls panel. Three things will
+happen:</p>
+
+<p class=Textbody>1. NEURON will print this message to the terminal (which
+might be behind some of NEURON's windows)</p>
+
+<p class=Textbody>            oc&gt;moving spine to dend[3] 0.64285714</p>
+
+<p class=Textbody>            dend[3]  nseg = 7  spine at 0.64285714</p>
+
+<p class=Textbody>2. The blue dot in Exp2Syn[0]'s PPM will move to the location
+shown in Fig. 8a, confirming that the entire spine is now where it should be.
+If a new Shape Plot appears on top of the user interface, you can dismiss it by
+clicking on its Close button.</p>
+
+<p class=Textbody>3. A new graph (called a &quot;shape plot&quot;) will appear
+on the screen that shows the model cell with the spine's parent dendrite
+highlighted in red. To discard this shape plot, click on its Close button.</p>
+
+<table class=MsoNormalTable border=0 cellspacing=0 cellpadding=0 width=665
+ style='border-collapse:collapse'>
+ <tr>
+  <td width=402 valign=top style='width:301.5pt;padding:0in .5pt 0in .5pt'>
+  <p class=Textbody>Now you're ready to run a simulation.</p>
+  <p class=Textbody>In the RunControl panel, click on Init &amp; Run and look
+  at the graph that shows plots of head.v(0.5), neck.v(0), and soma.v(0) vs.
+  time.</p>
+  <p class=Textbody>To rescale this graph so it looks more like the graph in
+  Fig. 8a, click on the little white menu box in the left upper corner of its
+  canvas, drag the mouse pointer up slightly to reveal the graph's secondary
+  menu, and then drag the pointer over to &quot;View = plot&quot;. Release the
+  mouse button and the graph should look like the inset in Fig. 8a.</p>
+  <p class=Textbody>&nbsp;</p>
+  <p class=Textbody align=center style='text-align:center'>&nbsp;</p>
+  </td>
+  <td width=263 valign=top style='width:197.1pt;padding:0in .5pt 0in .5pt'>
+  <p class=TableContents align=right style='text-align:right'><img width=270
+  height=261 src="readme.fld/image003.jpg" align=right hspace=12></p>
+  </td>
+ </tr>
+</table>
+
+<h3>To reproduce Fig. 8b</h3>
+
+<p class=Textbody style='page-break-after:avoid'>Click on the</p>
+
+<p class=Textbody style='page-break-after:avoid'>            Run &amp; Analyze</p>
+
+<p class=Textbody>button near the top of the Controls panel. This will march
+the spine over all of the segments in the model cell (you'll see the blue dot
+in the Exp2Syn PPM move), running a simulation at each point, for a total of
+760 simulations over the course of about 20 seconds or less depending on the
+speed of your computer.</p>
+
+<p class=Textbody>When this completes, many new graphs will appear, including
+XY plots of</p>
+
+<p class=Textbody style='margin-left:.5in'>voltage attenuation from spine head
+to dendrite (actually &quot;site of spine attachment&quot;) vs. distance from
+soma to spine location</p>
+
+<p class=Textbody style='margin-left:.5in'>maximum depolarization in mV at
+spine head (red) and point of spine attachment (black) vs. distance in um from
+soma to spine. The difference between these is the voltage drop across the
+spine neck.</p>
+
+<p class=Textbody style='margin-left:.5in'>normalized maximum depolarization
+vs. distance from soma to spine. The Y coordinates of this graph are the Y
+values of the black points in the previous plot divided by the very largest
+depolarization observed in the cell</p>
+
+<p class=Textbody style='page-break-after:avoid'>There will also be three color
+coded plots that show how spine location affects</p>
+
+<p class=Textbody>            maximum depolarization at the site of spine
+attachment (max depol @ spine loc)</p>
+
+<p class=Textbody>            maximum depolarization in the spine head (max
+depol @ spine head)</p>
+
+<p class=Textbody>            voltage attenuation from the spine head to the
+site of spine attachment (head-&gt;dend V atten)</p>
+
+<p class=Textbody>These three graphs correspond to the EPSP<span
+style='position:relative;top:1.0pt'>dend</span>, EPSP<span style='position:
+relative;top:1.0pt'>spine</span>, and EPSP<span style='position:relative;
+top:1.0pt'>spine</span>/EPSP<span style='position:relative;top:1.0pt'>dend</span> components
+of Fig.&nbsp;8b.</p>
+
+<p class=Textbody>&nbsp;</p>
+
+<p class=Textbody align=center style='text-align:center'><img width=331
+height=132 id="Picture 3" src="readme.fld/image004.jpg"
+alt="A screenshot of a computer&#10;&#10;Description automatically generated"></p>
+
+<p class=Textbody align=center style='text-align:center'>&nbsp;</p>
+
+<p class=Textbody>To generate a color coded plot that shows how input impedance
+Zin of the cell varies with location, in the Controls panel enter the frequency
+of interest (70 Hz for Fig. 8b) into the numeric field next to the Frequency
+button, then click on the button labeled</p>
+
+<p class=Textbody>            Click to show on cell</p>
+
+<p class=Textbody>This will produce shape plots that show how Zin and
+normalized Zin vary over the cell, and how spine location affects normalized
+EPSP amplitude at the site of spine attachment. The one labeled &quot;Zin
+70.0&nbsp;Hz&quot; corresponds to the &quot;Z<span style='position:relative;
+top:1.0pt'>dendrite</span> (70Hz)&quot; component of Fig. 8b.</p>
+
+</div>
+
+</body>
+
+</html>

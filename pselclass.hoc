@@ -1,0 +1,72 @@
+// $Id: pselclass.hoc,v 1.1 2015/09/29 19:32:03 ted Exp ted $
+
+/*
+A PSel has:
+--a graph to which Vector contents are plotted vs. t
+Actually at creation of a PSel instance, one passes two arguments:
+a List that contains the dependent variable Vectors, and a t Vector
+e.g.
+objref ps
+ps = new PSel(depveclist, tvec)
+where depveclist is a list that contains the dependent variable Vectors
+
+--a set of buttons for selecting which traces are of particular interest
+--a button that creates a new Graph that shows just those traces
+*/
+
+begintemplate PSel
+public init
+public g
+public selvec, testsel // testsel is for debugging purposes
+public gsel // plot of selected traces
+
+objref vlist, tvec
+objref g, hbox
+objref selvec, gsel
+
+proc init() { local ii
+  vlist = $o1
+  tvec = $o2
+  selvec = new Vector(vlist.count, 0)
+    // .x[i]==1 means vector $o1.o(i) has been selected
+
+  hbox = new HBox()
+  hbox.intercept(1)
+  g = new Graph()
+  listplot(vlist, $o2, g)
+
+  xpanel("")
+    for ii=0,vlist.count()-1 {
+      xcheckbox(vlist.o(ii).label(), &selvec.x[ii])
+        // in future, trace i should be redrawn in red or black
+        // depending on whether .x[i] is 1 or 0      
+    }
+//    xbutton("Test selection", "testsel()")
+    xbutton("Plot selected traces", "plotsel()")
+  xpanel()
+
+  hbox.intercept(0)
+  hbox.map("Plot Selection Tool", 200, 200, -1, 100)
+}
+
+proc listplot() { local ii
+  for ii=0,$o1.count()-1 $o1.o(ii).plot($o3,$o2)
+  $o3.exec_menu("View = plot")
+}
+
+proc testsel() { local ii
+  for ii=0,selvec.size()-1 \
+    if (selvec.x[ii]==1) print ii, vlist.o(ii).label()
+}
+
+proc plotsel() { local ii  localobj tmplist
+  tmplist = new List()
+  for ii=0,selvec.size()-1 \
+    if (selvec.x[ii]==1) tmplist.append(vlist.o(ii))
+  gsel = new Graph(0)
+  gsel.view(0, 0, 10, 4.4, 275, 512, 300.48, 200.32) // place on screen
+  listplot(tmplist, tvec, gsel) // rescales axes
+}
+
+endtemplate PSel
+

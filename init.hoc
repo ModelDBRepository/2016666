@@ -1,0 +1,199 @@
+// $Id: init.hoc,v 1.9 2014/07/28 20:25:16 ted Exp ted $
+
+load_file("nrngui.hoc")
+
+strdef CELLSTR
+load_file("cells.hoc") // contains statements of the form CELLSTR = "name.ses"
+print CELLSTR
+
+/////
+
+RA = 100 // ohm cm
+CM = 1 // uf/cm2
+SAF = 0.0 // relative contribution of spines to surface area of cell
+  // SAF is >= 0
+  // 0.1 means spines add 10% to surface area, 1 means they double surface area
+  // cell's specific membrane conductance and capacitance are multiplied by 1+SAF
+GPAS = 5e-5 // S/cm2
+SPINERA = RA // cytoplasmic resistivity of spine neck and head
+FREQ = 1 // Hz
+
+/////
+
+load_file(CELLSTR)
+
+CellBuild[0].continuous = 1 // ensure that Continuous Create was on once
+CellBuild[0].continuous = 0 // ensure that it is now off
+
+// the spine
+
+create neck, head
+
+connect neck(0), soma(0)
+connect head(0), neck(1)
+neck {pt3dclear() pt3dadd(195, 30, 0, 1) pt3dadd(195, 90, 0, 1)}
+head {pt3dclear() pt3dadd(195, 90, 0, 1) pt3dadd(195, 105, 0, 1)}
+
+NECKL = 1
+NECKDIAM = 0.05
+HEADL = 0.5 // um
+HEADDIAM = 0.5 // um
+
+proc tgeom() {
+  neck {
+    L = NECKL
+    diam = NECKDIAM
+  }
+  head {
+    L = HEADL
+    diam = HEADDIAM
+  }
+}
+
+tgeom()
+
+load_file("changediam.hoc") // facilitates changing diameter
+  // of a pt3d-specified section--see header for usage
+
+///// subsets
+
+objref cellsecs // will include all sections except for the spine
+cellsecs = new SectionList()
+forall cellsecs.append()
+objref spinesecs // just the spine's sections
+spinesecs = new SectionList()
+neck spinesecs.append()
+head spinesecs.append()
+cellsecs.remove(spinesecs)
+
+///// biophysics
+
+// this sets up basic biophysical properties
+// does NOT adjust specific membrane capacitance and conductance for spine area
+
+proc biophys() {
+  forall {
+    Ra = RA
+    cm = CM
+    insert pas
+    g_pas = GPAS
+    e_pas = 0
+  }
+  forsec spinesecs Ra = SPINERA
+}
+
+biophys()
+
+// and spatial discretization
+
+proc geom_nseg() {
+  forall { nseg = int((L/(0.1*lambda_f(100))+.999)/2)*2 + 1  }
+}
+
+geom_nseg()
+
+
+///// "instrumentation"
+
+load_file("rig.ses") // RunControl
+  // graph of head.v(0.5), neck.v(0), and soma.v(0)
+
+// adaptive integration can be tricky with these different spine locations
+// which may need different error tolerances
+// so don't bother with it
+// load_file("varstep.ses") // VariableTimeStep panel--speeds up simulations
+
+load_file("syn.ses") // a NetStim, and a PPM as Exp2Syn at head(0.5)
+  // Exp2Syn.e is 70
+
+objref syn
+head syn = Exp2Syn[0]
+syn.tau1 = 0.2
+syn.tau2 = 3
+
+load_file("syni.ses") // graph of syn.i
+
+objref pre, nc
+pre = NetStim[0]
+
+// WT = 3.36e-4 // for 20 pA peak synaptic current at the soma
+// when Rspine = 510 megohms
+// WT = 2.87e-4 // for 20 pA peak synaptic current at the soma
+// when Rspine is negligible
+// i.e. spine Ra = 0.1, neck L = 0.01
+// 70 mV * 2.87e-4 uS ~ 0.02009 nA = 20 pA
+WT = 2.91e-4 // for 20 pA peak synaptic current at the soma
+// when Rspine is 51 megoms
+// i.e. spine Ra = 100, neck L = 1, neck diam = 0.16
+nc = new NetCon(pre, syn)
+nc.delay = 0
+nc.weight = WT
+
+// mechanisms to detect max depol and facilitate graphs of depol vs. distance
+
+forall {
+  insert extr // to detect max depol
+  insert util // to hold vmax, vhmax, and distance from the model's root node
+}
+
+// set up values used for plots of vmax|vhmax vs. distance
+// assume that each section's 0 node is attached to the 1 node of its parent
+// except for those whose 0 nodes are attached to the root node of the model
+// i.e. the 0 node of the root section
+
+distance() // makes root section's 0 node the reference point for distance
+
+proc setdist() { // call after any change of nseg 
+  // for use in plots of vmax and vhmax vs. distance from cell origin
+  forall for (x, 0) { dist_util(x) = distance(x) }
+  forsec basal for (x,0) { dist_util(x) *= -1 } // plot basilar values at negative path distances
+}
+
+setdist()
+
+load_file("showplots.hoc") // plots results
+load_file("analysis.hoc") // analyzes results
+  // defines normvdata(), shownormvdata(), shownormzdata(), plotsqerr()
+
+terr = 0
+
+proc errmsg() {
+  terr = 1
+  print "error: max v in ", $s1, " is later than tstop at location ", $2, "of ", secname()
+}
+
+proc arun() {
+  // start by deleting shape plots
+  // to prevent the simulation from being slow as molasses
+  objref gshvmax, gshvhmax, gshahd
+  terr = 0
+  forsec cellsecs { // for each non-spine section in the cell
+    print "working on ", secname()
+    for (x,0) { // for each internal node of this section
+      neck disconnect() // disconnect neck from its existing parent
+      connect neck(0), x // connect neck(0) to x on currently accessed section
+      run() // automatically detect vmax_extr everywhere
+      vmax_util(x) = vmax_extr(x) // local max v
+      if (tmax_extr(x)>=tstop) errmsg("cell", x)
+      vhmax_util(x) = head.vmax_extr(0.5) // max v in spine head
+      if (tmax_extr(x)>=tstop) errmsg("spine head", x)
+      ahd_util(x) = vhmax_util(x)/vmax_util(x) // v atten from head to dendrite
+    }
+  }
+  // put spine back at middle of soma
+  neck disconnect() // disconnect neck from its existing parent
+  soma connect neck(0), 0.5 // connect neck(0) to x on currently accessed section
+  showvplots()
+  if (terr==1) {
+    print "tstop too short to detect max v at one or more locations--"
+    print "scroll back to see error messages"
+    print "recommend increasing tstop and running another batch of simulations"
+  }
+  normvdata() // defined in analysis.hoc
+  shownormvdata() // defined in analysis.hoc
+  plotsqerr()
+}
+
+// facilitate adjustment of model and synapse parameters
+
+load_file("parampanel.hoc")

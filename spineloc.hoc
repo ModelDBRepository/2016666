@@ -1,0 +1,463 @@
+// $Id: spineloc.hoc,v 1.16 2015/09/30 05:14:15 ted Exp ted $
+
+
+// buildpathfromrootnode() makes a SectionList
+// whose elements constitute the path from the cell's root node
+// to the currently accessed section
+
+objref ptrn, pfrn, shplt
+ptrn = new SectionList() // will contain the sections along the path
+  // that starts with the section that has the spine
+  // and ends with the root section
+pfrn = new SectionList() // same as ptrn but the sequence is centrifugal
+  // i.e. starts with root section and ends will the section that has the spine
+
+objref spinesubtree // the section that has the spine
+  // plus all of its descendants
+spinesubtree = new SectionList()
+
+objref pathplussubtree // path from soma to section that contains the spine
+  // plus that section's descendants
+pathplussubtree = new SectionList()
+
+// $o1 is a SectionList
+// addsec() is a recursive procedure that appends to $o1 
+// a centripetal path that starts with an "initial section"
+// i.e. the section that is CAS when addsec is first called
+// and ends with the root of the tree that contains the initial section
+
+proc addsec() { localobj sref
+  $o1.append() // append CAS
+  sref = new SectionRef()
+  if (ri(0) < 1e30) {
+    sref.parent addsec($o1)
+  }
+}
+
+// build paths to and from root node
+// and paths distal to the section that has the spine
+// also include all of these sections in the "pathplussubtree"
+
+proc buildpaths() { local ii  localobj tlist
+  // take care of the distal sections first
+  spinesubtree = new SectionList()
+  spinesubtree.subtree() // includes CAS
+  spinesubtree.remove() // omits CAS
+  head spinesubtree.remove() // also omit spine head and neck
+  neck spinesubtree.remove()
+  // spinesubtree now contains all sections that are children of the CAS
+  // but NOT the CAS
+
+  ptrn = new SectionList() // will be path from CAS to root node
+  addsec(ptrn)
+/*
+  // ensure that ptrn includes the root section
+  tlist = new SectionList()
+  tlist.allroots()
+  forsec tlist ptrn.append()
+  ptrn.unique() // but make sure the root section appears only once
+*/
+
+  // ptrn list is centripetal
+  // now reverse the sequence
+  pfrn = new SectionList() // will be path from root to CAS
+  // i.e. the path from root to the section that has the spine
+
+  tlist = new List()
+  forsec ptrn tlist.append(new SectionRef())
+  ii = tlist.count()-1
+  while (ii>=0) {
+    tlist.o(ii).sec pfrn.append()
+    ii-=1
+  }
+  shplt = new Shape()
+//  shplt.color_list(pfrn, 2) // red
+  shplt.color_list(ptrn, 2) // red
+  shplt.color_list(spinesubtree, 3) // blue
+
+  pathplussubtree = new SectionList()
+  forsec pfrn pathplussubtree.append()
+  forsec spinesubtree pathplussubtree.append()
+}
+
+
+///// control location of spine
+
+load_file("loc.ses") // point process manager configured as a Loc attached to soma 0.5
+
+objref locnc, nil, loc
+
+loc = Loc[0]
+locnc = new NetCon(nil, loc)
+locnc.weight = 0
+
+
+proc saywhere() { local x
+  x = locnc.postloc()
+  print secname(), "  nseg = ", nseg, " mark at ", x
+  pop_section()
+}
+
+objref sref
+sref = new SectionRef()
+
+proc moveto() { local lastx
+  x = locnc.postloc()
+/* to put spine in last segment
+  lastx = 1 - 0.5/nseg
+  print "moving spine to ", secname(), " ", lastx
+  neck disconnect() // disconnect neck from its existing parent
+  connect neck(0), lastx // connect neck(0) to x on currently accessed section
+  print secname(), "  nseg = ", nseg, " spine at ", lastx
+*/
+  // put spine at closest internal node
+  if (x==0) {
+    x = 0.5/nseg
+  } else {
+    if (x==1) x = 1 - 0.5/nseg
+  }
+  print "moving spine to ", secname(), " ", x
+  neck disconnect() // disconnect neck from its existing parent
+  connect neck(0), x // connect neck(0) to x on currently accessed section
+  Loc[0].loc(x) // make sure that Loc[0] is at the correct position
+    // NUTS!  PPM's text "at secname(range)" doesn't always refresh properly!
+  print secname(), "  nseg = ", nseg, " spine at ", x
+  buildpaths() // between root node and this section
+  sref = new SectionRef()
+  pop_section()
+}
+
+///// plot v vs. t at points along path from root node
+
+/*
+// not needed because we're using PSel
+objref gvt 
+strdef tstr
+
+// sets up a v vs. t plot
+// for each internal node of currently accessed section
+// do this in distal->proximal order
+proc setsecplots() { local x
+  // don't bother with 0 or 1 ends
+  for (x,0) {
+    sprint(tstr,"%s.v(%g)", secname(), 1-x) 
+    gvt.addvar(tstr)
+  }
+}
+*/
+
+/* not any more--using NodeMarks class defined in nodemarks.hoc
+// put a mark at each internal node of CAS
+proc marknodes() { local x
+  // don't bother with 0 or 1 ends
+  for (x,0) {
+    // put a mark at node
+    // requires interpolation from pt3d data
+    // for now do nothing
+  }
+}
+*/
+
+// v is to be recorded at each internal node along the path from root node
+// (usually the soma's 0 end)
+// to the distal end of the section that contains the spine
+objref vveclist // will be a List that holds the Vectors to which v is recorded
+vveclist = new List()
+objref tvec
+tvec = new Vector() // to record time
+
+strdef tmplabel
+
+// $o1 is a List to which recordings of v at all internal nodes of CAS
+// are to be appended
+
+proc setvecrec() { local x, i
+  i = 0
+  for (x,0) {
+    $o1.append(new Vector())
+    // proceed from distal to proximal
+    i+=1
+    sprint(tmplabel,"%s.v(%f)",secname(),1-x)
+    $o1.o($o1.count()-1).label(tmplabel)
+    $o1.o($o1.count()-1).record(&v(1-x))
+  }
+}
+
+load_file("nodemarks.hoc") // defines NodeMarks class
+  // used to mark locations of internal nodes along
+  // a set of sections contained in a SectionList
+objref marks // will be a SectionList that contains the sections
+  // that are used to implement the node marks
+strdef markstyle
+markstyle = "+" // use plus sign for the marks
+  // any other character results in x shaped marks
+marksize = 5 // um, defines length of each arm of a mark
+
+proc setplotsalongpath() { local x, ii
+/* don't bother with gvt--using PSel now
+  if (gvt!=nil) { // it points to something
+    ii = graphList[0].index(gvt) // remove it from graphList[0] if necessary
+    if (ii>=0) graphList[0].remove(ii)
+    objref gvt // and get rid of whatever it points to
+  }
+  gvt = new Graph(0)
+  gvt.size(0,tstop,0,30)
+  gvt.view(0, 0, tstop, 30, 962, 25, 300.48, 200.32)
+  addplot(gvt,0) // add to graphList 0
+  forsec ptrn { // stacks graph's variable labels from distal at top
+                // to proximal at bottom
+    setsecplots() // for each internal node in CAS add a v trace to gvt
+    marknodes() // put a mark at each internal node of CAS
+  }
+  gvt.addvar("soma.v(0.5)") // internal nodes only!
+*/
+  // but we still want to see where the nodes are!
+//  forsec ptrn marknodes() // put a mark at each internal node of CAS
+  marks = new NodeMarks(ptrn, markstyle, marksize)    
+
+/*
+  // restore these colors!
+  shplt.color_list(ptrn, 2) // red
+  shplt.color_list(spinesubtree, 3) // blue
+  // nuts--doesn't work to restore them here--do it in proc pathcolors() instead
+*/
+
+  // now set up vector recording at internal nodes along path
+  // start periperally and proceed toward center
+  vveclist = new List() // discard old data
+  forsec ptrn setvecrec(vveclist) // for ea intl node in CAS capture v(t)
+  vveclist.append(new Vector())
+  soma vveclist.o(vveclist.count()-1).record(&v(0.5))
+  vveclist.o(vveclist.count()-1).label("soma.v(0.5)")
+
+  tvec = new Vector() // really only have to do this once
+  tvec.record(&t)
+}
+
+proc pathcolors() {
+  // restore these colors, which may have been undone by adding NodeMarks
+  shplt.color_list(ptrn, 2) // red
+  shplt.color_list(spinesubtree, 3) // blue
+}
+
+objref gvp
+
+proc plotvmaxonpath() { local ii, maxv, maxd
+  objref gvp
+  gvp = new Graph(0)
+  gvp.size(0,180,0,24)
+  gvp.view(0, 0, 180, 24, 962, 286, 301.44, 200.32)
+//  forsec pfrn for (x,0) gvp.mark(distance(x), vmax_extr(x), "+", 5)
+  maxv = 0
+  maxd = 0
+  gvp.beginline(1, 1)
+  forsec pfrn for (x,0) {
+    gvp.mark(distance(x), vmax_extr(x), "O", 6)
+    gvp.line(distance(x), vmax_extr(x))
+    if (maxv<vmax_extr(x)) maxv = vmax_extr(x)
+    if (maxd<distance(x)) maxd = distance(x)
+  }
+  gvp.exec_menu("View = plot")
+  gvp.flush()
+  gvp.size(0,maxd,0,maxv)
+  gvp.view(0, 0, maxd, maxv, 962, 286, 301.44, 200.32)
+}
+
+/*
+proc plotdistalvmax() {
+//  forsec pfrn for (x,0) gvp.mark(distance(x), vmax_extr(x), "+", 5)
+  gvp.beginline(1, 1)
+  forsec pfrn for (x,0) {
+    gvp.mark(distance(x), vmax_extr(x), "O", 6)
+    gvp.line(distance(x), vmax_extr(x))
+  }
+  gvp.exec_menu("View = plot")
+  gvp.flush()
+}
+*/
+
+/////
+
+// should refactor this to eliminate overlap with previously developed stuff
+
+objref spgmax, spveclist
+spveclist = new List() // list of Vectors that contain values of vmax for plotting
+
+BLACK = 1
+RED = 2
+
+strdef synlocstr
+
+// sets synlocstr to a string of the form
+// secname(rangeval)
+// which describes the location to which the spine neck is attached
+proc buildsynlocstr() { local x
+  x = $o1.get_loc()
+  sprint(synlocstr,"Spine is at %s(%f)",secname(),x)
+  pop_section()
+}
+
+/*
+print "CAS starts as ", secname()
+buildsynlocstr()
+print "and ends as ", secname()
+print synlocstr
+*/
+
+proc spshowpoints() {
+  objref spgmax
+  spgmax = new Graph(0)
+  spgmax.color(BLACK)
+  // plot vmax_extr(x) vs. distance(x) instead of vmax_util(x) vs. dist_util(x)
+//  forsec pathplussubtree for (x,0) spgmax.mark(dist_util(x), vmax_util(x), "+", 5)
+  forsec pathplussubtree for (x,0) spgmax.mark(distance(x), vmax_extr(x), "+", 5)
+  spgmax.size(-300,1300,0,MAX_VHEAD)
+  spgmax.view(-300, 0, 1600, MAX_VHEAD, 894, 286, 300.48, 200.32)
+  spgmax.exec_menu("View = plot")
+//  spgmax.label(0.65, 0.2, "Max depol (mV)", 2, 1, 0, 0, 1)
+  spgmax.label(0.15, 0.85, "Peak depol (mV)", 2, 1, 0, 0, 1)
+  buildsynlocstr(Loc[0])
+  spgmax.label(0.11, 0.75, synlocstr, 2, 1, 0, 0, 1)
+}
+
+// $o1 is veclist
+// $2 is 0 for non-root section, 1 for root section
+
+// proc spgetsecdata() { local ii  localobj tdistvec, tvmaxvec, tvhmaxvec, tahdvec, srefthis
+proc spgetsecdata() { local ii  localobj tdistvec, tvmaxvec, srefthis
+  // get currently accessed section's distances and max vals into a set of vectors
+  // and append them to a List
+  tdistvec = new Vector(nseg)
+  tvmaxvec = new Vector(nseg)
+//  tvhmaxvec = new Vector(nseg)
+//  tahdvec = new Vector(nseg)
+  ii = 0
+  for (x,0) {
+//    tdistvec.x[ii] = dist_util(x)
+//    tvmaxvec.x[ii] = vmax_util(x)
+    tdistvec.x[ii] = distance(x)
+    tvmaxvec.x[ii] = vmax_extr(x)
+//    tvhmaxvec.x[ii] = vhmax_util(x)
+//    tahdvec.x[ii] = ahd_util(x)
+    ii+=1
+  }
+  
+  if ($2==0) { // nonroot sections require special treatment
+    // the first elements of each nonroot section's vectors
+    // must be distance and max vals from a node in its parent
+    // but from which end of the parent?
+    srefthis = new SectionRef()
+    if (srefthis.has_trueparent() == 1) { // the most common case
+      // this section has a true parent
+      // so the vectors' first elements must be distance and max vals from just inside parent's 1 end
+      srefthis.parent() {
+//        tdistvec.append(dist_util(1))
+//        tvmaxvec.append(vmax_util(1))
+        tdistvec.append(distance(1 - 0.5/nseg))
+        tvmaxvec.append(vmax_extr(1))
+//        tvhmaxvec.append(vhmax_util(1))
+//        tahdvec.append(ahd_util(1))
+      }
+    } else { // less common
+      // this section is connected to the 0 end of the root section
+      // its vectors' first elements must be distance and max vals from just inside root section's 0 end
+      rootsecref.sec { // make rootsec the current section
+        srefthis.parent() {
+//          tdistvec.append(dist_util(0))
+//          tvmaxvec.append(vmax_util(0))
+          tdistvec.append(distance(0.5/nseg))
+          tvmaxvec.append(vmax_extr(0))
+//          tvhmaxvec.append(vhmax_util(0))
+//          tahdvec.append(ahd_util(0))
+        }
+      }
+    }
+    // now make parent node data become each vector's first element
+    tdistvec.rotate(1)
+    tvmaxvec.rotate(1)
+//    tvhmaxvec.rotate(1)
+//    tahdvec.rotate(1)
+  }
+  $o1.append(tdistvec) // .o(0) is distance vector
+  $o1.append(tvmaxvec) // .o(1) is vmax vector
+//  $o1.append(tvhmaxvec) // .o(2) is vhmax vector
+//  $o1.append(tahdvec) // .o(3) is ahd vector
+}
+
+proc spshowvplots() { local ii  localobj tdistvec, tvmaxvec, tvhmaxvec, srefthis
+  // plots of vmax and vhmax vs. distance
+  spshowpoints() // first show the points
+
+  // next draw lines
+
+  // for each section get the distances and max values into vectors
+  // if the section has a parent, make sure the vectors' first elements are the 
+  // distances and max values that belong to the parent's nearest internal node
+  // append these Vectors to veclist
+  spveclist = new List() // .o(0) will be the x value vector
+  // first deal with the root section
+  // get its distances and max vals into a set of vectors
+  rootsecref.sec spgetsecdata(spveclist, 1)
+  // now deal with non-root sections
+  forsec pathplussubtree spgetsecdata(spveclist, 0)
+
+  // finally plot the vmax and vhmax vectors against the distance vector in gmax
+  // and the gahd vectors against the distance vector in gahd
+  ii=0
+/*
+  while (ii<veclist.count) {
+    veclist.o(ii+1).plot(gmax, veclist.o(ii), BLACK, 1)
+    veclist.o(ii+2).plot(gmax, veclist.o(ii), RED, 1)
+    veclist.o(ii+3).plot(gahd, veclist.o(ii), BLACK, 1)
+    ii+=4
+  }
+*/
+  while (ii<spveclist.count) {
+    spveclist.o(ii+1).plot(spgmax, spveclist.o(ii), BLACK, 1)
+//    veclist.o(ii+2).plot(gmax, veclist.o(ii), RED, 1)
+//    veclist.o(ii+3).plot(gahd, veclist.o(ii), BLACK, 1)
+//    ii+=4
+    ii+=2
+  }
+  // mark the very first datum of the very first vector
+  // y value is spveclist.o(1).x[0]
+  // x value is spveclist.o(0).x[0]
+  spgmax.mark(spveclist.o(0).x[0], spveclist.o(1).x[0], "+", 5)
+// revise this so it scales the Y axis nicely
+  spgmax.exec_menu("View = plot")
+}
+
+// $o1 is a List that contains Vectors
+// $o2 is the tvec for those Vectors
+
+objref ggg
+
+proc listplot() { local i
+  ggg = new Graph()
+  for ii=0,$o1.count()-1 $o1.o(ii).plot(ggg,$o2)
+  ggg.exec_menu("View = plot")
+}
+
+/////
+
+load_file("pselclass.hoc")
+
+objref psel
+
+print "defining proc genfig"
+// xbutton("Generate figure", "setplotsalongpath()  run()  gvt.exec_menu(\"View = plot\")")
+proc genfig() {
+  setplotsalongpath()
+  run()
+//  gvt.exec_menu("View = plot") // no longer needed--using PSel
+//  plotvmaxonpath() // from soma to 1 end of section that has the spine
+//  plotdistalvmax() // children of the section that has the spine
+  spshowvplots()
+/*
+  listplot(vveclist,tvec) // instead make a new proc that spawns a bunch of graphs
+    // one per recorded v
+*/
+//  listplot(vveclist,tvec) // instead make a new proc that spawns a bunch of 
+  psel = new PSel(vveclist, tvec)
+}
+

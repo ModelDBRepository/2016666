@@ -1,0 +1,40 @@
+/*
+usage:
+  sectionname changediam(k)
+where sectionname is the name of the section whose diameter is to be changed
+and k is the scale factor that is to be applied to that section
+*/ 
+
+proc changediam() { local i
+//  print "changing ", secname(), " diameter by a factor of ", $1
+//  print " "
+  for i=0,n3d()-1 pt3dchange(i, diam3d(i)*$1)
+}
+
+/*
+usage:
+  sectionname forcemindiam(minval)
+where sectionname is the name of the section whose diameter is to be changed
+and minval is the minimum value that is allowed
+*/
+
+proc forcemindiam() { local i
+  for i=0,n3d()-1 {
+    if (diam3d(i)<$1) pt3dchange(i, $1)
+  }
+}
+
+// diameter adjustments for 070502-exp2-zB
+
+redfactor = 0.8
+targetbasaldiam = 0.4
+targetapicaldiam = 0.3
+
+proc adjustdiams() {
+  forsec basal changediam(0.8)
+  forsec basal forcemindiam(targetbasaldiam)
+  forsec apical forcemindiam(targetapicaldiam)
+}
+
+adjustdiams()
+

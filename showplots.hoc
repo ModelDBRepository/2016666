@@ -1,0 +1,235 @@
+// $Id: showplots.hoc,v 1.8 2014/08/18 04:39:50 ted Exp ted $
+
+MAX_VHEAD = 30 // wild guesses, refine later
+MAX_AHD = 20
+
+// $1 min value
+// $2 max value
+
+func nicemax() { local range, factor
+  range = $2-$1
+  factor = 0
+  while (range<10) {
+    range*=10
+    factor+=1
+  }
+  while (range>=100) {
+    range/=10
+    factor-=1
+  }
+  // now 8<=range<80
+//  if (range<=10) range=10
+  if ((range>10)&&(range<=12)) range=12
+  if ((range>12)&&(range<=15)) range=15
+  if ((range>15)&&(range<=20)) range = 20
+  if ((range>20)&&(range<=25)) range = 25
+  if ((range>25)&&(range<=30)) range = 30
+  if ((range>30)&&(range<=40)) range = 40
+  if ((range>40)&&(range<=50)) range = 50
+  if ((range>50)&&(range<=60)) range = 60
+  if ((range>60)&&(range<=80)) range = 80
+  if ((range>80)&&(range<=100)) range = 100
+  // restore range magnitude
+  if (factor<0) {
+    for i=0,-factor-1 range*=10
+  } else {
+    if (factor>0) {
+      for i=0,factor-1 range/=10
+    }
+  }
+  // finally add to min value and return as nicemax
+  return range+$1
+}
+
+/////
+
+// false color plots of vmax, vhmax, and ahd
+// easy, do them first
+
+objref gshvmax, gshvhmax, gshahd
+
+proc plotvshapes() { local i
+  objref gshvmax, gshvhmax, gshahd
+
+  MAX_VHEAD = 0
+  MAX_AHD = 0
+  forsec cellsecs for (x,0) {
+    if (vhmax_util(x)>MAX_VHEAD) MAX_VHEAD = vhmax_util(x)
+    if (ahd_util(x)>MAX_AHD) MAX_AHD = ahd_util(x)
+  }
+
+  gshvmax = new PlotShape(0)
+  gshvmax.size(-395.042,418.692,-130.222,683.512)
+  gshvmax.variable("vmax_util")
+  gshvmax.view(-395.042, -130.222, 813.734, 813.734, 894, 25, 200.64, 200.32)
+//  gshvmax.scale(0,MAX_VHEAD)
+  gshvmax.scale(0,nicemax(0,MAX_VHEAD))
+  gshvmax.exec_menu("Shape Plot")
+  gshvmax.label(0.5, 0.65, "max depol @", 2, 1, 0, 0, 1)
+  gshvmax.label(0.5, 0.57, " spine loc", 2, 1, 0, 0, 1)
+
+  gshvhmax = new PlotShape(0)
+  gshvhmax.size(-395.042,418.692,-130.222,683.512)
+  gshvhmax.variable("vhmax_util")
+  gshvhmax.view(-395.042, -130.222, 813.734, 813.734, 1115, 25, 200.64, 200.32)
+//  gshvhmax.scale(0,MAX_VHEAD)
+  gshvhmax.scale(0,nicemax(0,MAX_VHEAD))
+  gshvhmax.exec_menu("Shape Plot")
+  gshvhmax.label(0.5, 0.65, "max depol @", 2, 1, 0, 0, 1)
+  gshvhmax.label(0.5, 0.57, " spine head", 2, 1, 0, 0, 1)
+
+  gshahd = new PlotShape(0)
+  gshahd.size(-395.042,418.692,-130.222,683.512)
+  gshahd.variable("ahd_util")
+  gshahd.view(-395.042, -130.222, 813.734, 813.734, 1336, 25, 200.64, 200.32)
+//  gshahd.scale(0,MAX_AHD)
+//  gshahd.scale(0,nicemax(0,MAX_AHD))
+  gshahd.scale(1,nicemax(0,MAX_AHD))
+  gshahd.exec_menu("Shape Plot")
+  gshahd.label(0.5, 0.65, "head->dend", 2, 1, 0, 0, 1)
+  gshahd.label(0.5, 0.57, " V atten", 2, 1, 0, 0, 1)
+}
+
+/////
+
+objref allbutroot, rootseclist, rootsecref
+allbutroot = new SectionList()
+forsec cellsecs allbutroot.append()
+rootseclist = new SectionList()
+rootseclist.allroots()
+allbutroot.remove(rootseclist) // now allbutroot contains all sections except the root section
+
+// ensure that there is only one root section
+// and warn user if there were multiple root sections
+
+proc getrootsec() { local count, ii
+  ii = 0
+  forsec rootseclist ii+=1
+  if (ii > 1) print "Error--multiple root sections, ignoring all but 1"
+  forsec rootseclist rootsecref = new SectionRef()
+  // rootsecref ends up pointing to last section in rootseclist
+}
+
+getrootsec()
+
+
+objref gmax, gahd, veclist
+veclist = new List() // list of Vectors that contain values of vmax, vhmax, and ahd for plotting
+
+BLACK = 1
+RED = 2
+
+proc showpoints() { local ahdmax
+  objref gmax
+  gmax = new Graph(0)
+  gmax.color(BLACK)
+  forsec cellsecs for (x,0) gmax.mark(dist_util(x), vmax_util(x), "+", 5)
+  gmax.color(RED)
+  forsec cellsecs for (x,0) gmax.mark(dist_util(x), vhmax_util(x), "+", 5)
+  gmax.color(BLACK) // back to default black
+  gmax.size(-300,1300,0,MAX_VHEAD)
+  gmax.view(-300, 0, 1600, MAX_VHEAD, 894, 286, 300.48, 200.32)
+  gmax.exec_menu("View = plot")
+  gmax.label(0.65, 0.2, "Max depol (mV)", 2, 1, 0, 0, 1)
+
+  ahdmax = 1
+  objref gahd
+  gahd = new Graph(0)
+  gahd.color(BLACK)
+  forsec cellsecs for (x,0) {
+    gahd.mark(dist_util(x), ahd_util(x), "+", 5)
+    if (ahd_util(x) > ahdmax) ahdmax = ahd_util(x)
+  }
+  gahd.size(-300,1300,0,ahdmax)
+  gahd.view(-300, 0, 1600, ahdmax, 1557, 25, 300.48, 200.32)
+//  gahd.exec_menu("View = plot")
+  gahd.label(0.35, 0.8, "V atten from head to dend", 2, 1, 0, 0, 1)
+}
+
+// $o1 is veclist
+// $2 is 0 for non-root section, 1 for root section
+
+proc getsecdata() { local ii  localobj tdistvec, tvmaxvec, tvhmaxvec, tahdvec, srefthis
+  // get currently accessed section's distances and max vals into a set of vectors
+  // and append them to a List
+  tdistvec = new Vector(nseg)
+  tvmaxvec = new Vector(nseg)
+  tvhmaxvec = new Vector(nseg)
+  tahdvec = new Vector(nseg)
+  ii = 0
+  for (x,0) {
+    tdistvec.x[ii] = dist_util(x)
+    tvmaxvec.x[ii] = vmax_util(x)
+    tvhmaxvec.x[ii] = vhmax_util(x)
+    tahdvec.x[ii] = ahd_util(x)
+    ii+=1
+  }
+  
+  if ($2==0) { // nonroot sections require special treatment
+    // the first elements of each nonroot section's vectors
+    // must be distance and max vals from a node in its parent
+    // but from which end of the parent?
+    srefthis = new SectionRef()
+    if (srefthis.has_trueparent() == 1) { // the most common case
+      // this section has a true parent
+      // so the vectors' first elements must be distance and max vals from just inside parent's 1 end
+      srefthis.parent() {
+        tdistvec.append(dist_util(1))
+        tvmaxvec.append(vmax_util(1))
+        tvhmaxvec.append(vhmax_util(1))
+        tahdvec.append(ahd_util(1))
+      }
+    } else { // less common
+      // this section is connected to the 0 end of the root section
+      // its vectors' first elements must be distance and max vals from just inside root section's 0 end
+      rootsecref.sec { // make rootsec the current section
+        srefthis.parent() {
+          tdistvec.append(dist_util(0))
+          tvmaxvec.append(vmax_util(0))
+          tvhmaxvec.append(vhmax_util(0))
+          tahdvec.append(ahd_util(0))
+        }
+      }
+    }
+    // now make parent node data become each vector's first element
+    tdistvec.rotate(1)
+    tvmaxvec.rotate(1)
+    tvhmaxvec.rotate(1)
+    tahdvec.rotate(1)
+  }
+  $o1.append(tdistvec) // .o(0) is distance vector
+  $o1.append(tvmaxvec) // .o(1) is vmax vector
+  $o1.append(tvhmaxvec) // .o(2) is vhmax vector
+  $o1.append(tahdvec) // .o(3) is ahd vector
+}
+
+proc showvplots() { local ii  localobj tdistvec, tvmaxvec, tvhmaxvec, srefthis
+  plotvshapes() // do the easiest thing first
+
+  // plots of vmax and vhmax vs. distance
+  showpoints() // first show the points
+
+  // next draw lines
+
+  // for each section get the distances and max values into vectors
+  // if the section has a parent, make sure the vectors' first elements are the 
+  // distances and max values that belong to the parent's nearest internal node
+  // append these Vectors to veclist
+  veclist = new List() // .o(0) will be the x value vector
+  // first deal with the root section
+  // get its distances and max vals into a set of vectors
+  rootsecref.sec getsecdata(veclist, 1)
+  // now deal with non-root sections
+  forsec allbutroot getsecdata(veclist, 0)
+
+  // finally plot the vmax and vhmax vectors against the distance vector in gmax
+  // and the gahd vectors against the distance vector in gahd
+  ii=0
+  while (ii<veclist.count) {
+    veclist.o(ii+1).plot(gmax, veclist.o(ii), BLACK, 1)
+    veclist.o(ii+2).plot(gmax, veclist.o(ii), RED, 1)
+    veclist.o(ii+3).plot(gahd, veclist.o(ii), BLACK, 1)
+    ii+=4
+  }
+}
+

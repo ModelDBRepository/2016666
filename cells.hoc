@@ -1,0 +1,28 @@
+// $Id: cells.hoc,v 1.2 2013/10/14 15:20:34 ted Exp $
+
+/*
+CELLSTR = "gonzalez_burgos/cellgb1.ses"
+CELLSTR = "gonzalez_burgos/cellgb2.ses"
+CELLSTR = "gonzalez_burgos/cellgb2noax.ses"
+CELLSTR = "gonzalez_burgos/cellgb3.ses"
+CELLSTR = "gonzalez_burgos/cellgb3noax.ses"
+*/
+
+// CELLSTR = "gonzalez_burgos/cellgb4.ses" // axon[20]'s diam3d(0) == 0
+  // that's not good, and it gags geom_nseg()
+
+CELLSTR = "stuart/ri18fixed.ses" // lower Zin than yuste cells
+
+CELLSTR = "yuste/am31_2.ses"
+CELLSTR = "yuste/am31_2noax.ses"
+CELLSTR = "yuste/am54_1.ses"
+CELLSTR = "yuste/am54_1noax.ses"
+CELLSTR = "yuste/am63_1.ses"
+CELLSTR = "yuste/am63_1noax.ses"
+/*
+CELLSTR = "yuste/xam125_1.ses"
+CELLSTR = "yuste/xam125_1noax.ses"
+*/
+
+CELLSTR = "krieger/070502-exp2-zB_noax.ses"
+

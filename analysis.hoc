@@ -1,0 +1,220 @@
+// $Id: analysis.hoc,v 1.10 2014/08/18 04:43:18 ted Exp ted $
+
+// normalize vmax and vhmax
+
+objref vmaxvec, nvmaxvec
+vmaxvec = new Vector()
+nvmaxvec = new Vector()
+objref vhmaxvec, nvhmaxvec
+vhmaxvec = new Vector()
+nvhmaxvec = new Vector() // I'm not sure this is useful for us
+
+proc normvdata() { local maxval, ii
+  vmaxvec = new Vector()
+  vhmaxvec = new Vector()
+  forsec cellsecs for (x,0) {
+    vmaxvec.append(vmax_util(x))
+    vhmaxvec.append(vhmax_util(x))
+  }
+  maxval = vmaxvec.max
+  nvmaxvec = vmaxvec.c.div(maxval)
+  maxval = vhmaxvec.max
+  nvhmaxvec = vhmaxvec.c.div(maxval)
+  ii = 0
+  forsec cellsecs for (x,0) {
+    nvmax_util(x) = nvmaxvec.x[ii]
+    nvhmax_util(x) = nvhmaxvec.x[ii]
+    ii += 1
+  }
+}
+
+// normvdata()
+
+objref gnorm, glnorm // normalized max depol and log10 of that
+
+objref nil
+
+proc shownormvdata() {
+  if (gnorm==nil) {
+    gnorm = new Graph(0)
+    gnorm.size(-300,1300,0,1)
+    gnorm.view(-300, 0, 1600, 1, 1221, 286, 300.48, 200.32)
+    gnorm.label(0.67, 0.25, "Normalized", 2, 1, 0, 0, 1)
+    gnorm.label(0.67, 0.18, "max depol", 2, 1, 0, 0, 1)
+  }
+  gnorm.exec_menu("Erase")
+  gnorm.color(BLACK)
+  forsec cellsecs for (x,0) gnorm.mark(dist_util(x), nvmax_util(x), "+", 5)
+// not sure plotting normalized depol in spine head is useful
+//  gnorm.color(RED)
+//  forsec cellsecs for (x,0) gnorm.mark(dist_util(x), nvhmax_util(x), "+", 5)
+//  gnorm.color(BLACK) // back to default black
+//  gnorm.exec_menu("View = plot")
+
+  if (glnorm==nil) {
+    glnorm = new Graph(0)
+    glnorm.size(-300,1300,-2,0)
+    glnorm.view(-300, -2, 1600, 2, 1544, 286, 300.48, 200.32)
+    glnorm.label(0.4, 0.15, "log10(normalized max depol)", 2, 1, 0, 0, 1)
+  }
+  glnorm.exec_menu("Erase")
+  glnorm.color(BLACK)
+  forsec cellsecs for (x,0) glnorm.mark(dist_util(x), log10(nvmax_util(x)), "+", 5)
+}
+
+
+// $1 = frequency in Hz
+
+objref zzz, zinvec, nzinvec, phasevec
+zzz = new Impedance()
+soma zzz.loc(0)
+
+proc calczin() { local tmp
+  zinvec = new Vector()
+  phasevec = new Vector()
+  zzz.compute($1)
+  forsec cellsecs for (x,0) {
+    tmp = zzz.input(x)
+    zinvec.append(tmp)
+    zin_util(x) = tmp
+    tmp = zzz.input_phase(x)
+    phasevec.append(tmp)
+    phase_util(x) = tmp
+  }
+  tmp = zinvec.max()
+  nzinvec = zinvec.c.div(tmp)
+  tmp = 0
+  forsec cellsecs for (x,0) {
+    nzin_util(x) = nzinvec.x[tmp]
+    tmp += 1
+  }
+}
+
+// calczin(1)
+calczin(FREQ)
+
+BLUE = 3
+GREEN = 4
+
+objref glnormerr, gzinphase
+
+proc shownormzdata() {
+  gnorm.color(BLUE)
+  forsec cellsecs for (x,0) gnorm.mark(dist_util(x), nzin_util(x), "+", 5)
+  gnorm.color(BLACK)
+  glnorm.color(BLUE)
+  forsec cellsecs for (x,0) glnorm.mark(dist_util(x), log10(nzin_util(x)), "+", 5)
+  glnorm.color(BLACK)
+
+  if (glnormerr==nil) {
+    glnormerr = new Graph(0)
+    glnormerr.size(-300,1300,-0.2,0.4)
+    glnormerr.view(-300, -0.2, 1600, 0.6, 1544, 547, 300.48, 200.32)
+    glnormerr.label(0.4, 0.15, "log10(normalized max depol)", 2, 1, 0, 0, 1)
+    glnormerr.label(0.4, 0.08, "- log10(normalized Zin)", 2, 1, 0, 0, 1)
+  }
+  glnormerr.exec_menu("Erase")
+  glnormerr.color(BLACK)
+  forsec cellsecs for (x,0) glnormerr.mark(dist_util(x), log10(nvmax_util(x)/nzin_util(x)), "+", 5)
+
+  if (gzinphase==nil) {
+    gzinphase = new Graph(0)
+    gzinphase.size(-300,1300,-1.0,0.0)
+    gzinphase.view(-300, -1.0, 1600, 1.0, 1219, 547, 300.48, 200.32)
+    gzinphase.label(0.4, 0.15, "Zin phase (radians)", 2, 1, 0, 0, 1)
+  }
+  gzinphase.exec_menu("Erase")
+  gzinphase.color(BLACK)
+  forsec cellsecs for (x,0) gzinphase.mark(dist_util(x), phase_util(x), "+", 5)
+}
+
+proc scs() {
+  shownormvdata()
+  calczin($1)
+  shownormzdata()
+}
+
+MAX_ZIN = 0
+proc update_maxzin() {
+  MAX_ZIN = 0
+  forsec cellsecs for (x,0) if (zin_util(x)>MAX_ZIN) MAX_ZIN = zin_util(x)
+}
+update_maxzin()
+
+objref gshnvmax, gshnzin, gshzin
+strdef tstr
+
+proc plotnshapes() {
+  objref gshnvmax, gshnzin, gshzin
+
+  sprint(tstr,"%5.1f Hz", FREQ)
+
+  gshnvmax = new PlotShape(0)
+  gshnvmax.size(-395.042,418.692,-130.222,683.512)
+  gshnvmax.variable("nvmax_util")
+  gshnvmax.view(-395.042, -130.222, 813.734, 813.734, 994, 25, 200.64, 200.32)
+  gshnvmax.scale(0,1)
+  gshnvmax.exec_menu("Shape Plot")
+  gshnvmax.label(0.55, 0.65, "norm depol", 2, 1, 0, 0, 1)
+  gshnvmax.label(0.65, 0.5, tstr, 2, 1, 0, 0, 1)
+
+  gshnzin = new PlotShape(0)
+  gshnzin.size(-395.042,418.692,-130.222,683.512)
+  gshnzin.variable("nzin_util")
+  gshnzin.view(-395.042, -130.222, 813.734, 813.734, 1215, 25, 200.64, 200.32)
+  gshnzin.scale(0,1)
+  gshnzin.exec_menu("Shape Plot")
+  gshnzin.label(0.55, 0.65, "norm Zin", 2, 1, 0, 0, 1)
+  gshnzin.label(0.65, 0.5, tstr, 2, 1, 0, 0, 1)
+
+  gshzin = new PlotShape(0)
+  gshzin.size(-395.042,418.692,-130.222,683.512)
+  gshzin.variable("zin_util")
+  gshzin.view(-395.042, -130.222, 813.734, 813.734, 1436, 25, 200.64, 200.32)
+//  gshzin.scale(0,1)
+  update_maxzin()
+  gshzin.scale(0,nicemax(0,MAX_ZIN))
+  gshzin.exec_menu("Shape Plot")
+  gshzin.label(0.55, 0.65, "Zin", 2, 1, 0, 0, 1)
+  gshzin.label(0.65, 0.5, tstr, 2, 1, 0, 0, 1)
+}
+
+// for a range of frequencies calculate
+// summa (log10(normz/normv))^2
+// plot vs. freq
+
+func sumsqerr() { local tmp  localobj errvec
+  errvec = nzinvec.c
+  errvec.div(nvmaxvec) // elements are normalized zin/normalized vmax
+  errvec.log10() // elements are log10(normalized zin/normalized vmax)
+  return errvec.sumsq // sum of squared differences i.e. of log10(nzin)-log10(nvmax)
+}
+
+objref log10f, log10squerr
+objref gsqerr // plot of sum of squared log10(normalized input impedance / normalized max v) vs. log10(freq)
+objref sumsqerrvec, freqvec
+sumsqerrvec = new Vector()
+freqvec = new Vector()
+
+proc plotsqerr() { local ii, freq
+  sumsqerrvec = new Vector()
+  freqvec = new Vector()
+  for ii = 0,30 { // for 1..1000 Hz
+    freq = 10^(0.1*ii)
+    calczin(freq)
+    freqvec.append(freq)
+    sumsqerrvec.append(sumsqerr())
+  }
+  objref gsqerr
+//  gsqerr = new Graph()
+//  gsqerr.size(0,1000,0,100)
+//  gsqerr.view(0, 0, 1000, 100, 894, 547, 300.48, 200.32)
+  gsqerr = new Graph(0)
+  sumsqerrvec.plot(gsqerr, freqvec)
+  gsqerr.size(0,freqvec.max(),0,sumsqerrvec.max())
+  gsqerr.view(0, 0, freqvec.max(), sumsqerrvec.max(), 894, 547, 300.48, 200.32)
+  gsqerr.label(0.2, 0.8, "SUMMA (norm vmax - norm zin)^2", 2, 1, 0, 0, 1)
+  gsqerr.label(0.2, 0.73, "vs. freq (Hz)", 2, 1, 0, 0, 1)
+//  gsqerr.exec_menu("View = plot")
+}
+

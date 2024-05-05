@@ -1,0 +1,119 @@
+// $Id: parampanel.hoc,v 1.15 2015/09/30 05:40:15 ted Exp ted $
+
+///// for panel to adjust model parameters
+
+func forcege() {
+  if ($1<$2) {
+    $1 = $2
+  }
+  return $1
+}
+
+func raxial() { local tmp
+  tmp = 0
+  for (x) if (x>0) tmp+= ri(x)
+  return tmp
+}
+
+func rspine() { local tmp
+  neck tmp = raxial()
+  head tmp += ri(0.5)
+  return tmp
+}
+
+Rspine = rspine() // for display in Control panel
+
+// calculate values that are affected by alterations of
+// model biophysics or anatomy of spine or test dendrite
+
+tau_m = 0.001*CM/GPAS
+
+proc recalc() {
+  geom_nseg()
+  setdist()
+  Rspine = rspine()
+  tau_m = 0.001*CM/GPAS
+}
+
+///// change model properties
+
+proc setbiophys() {
+  forsec spinesecs {
+    Ra = SPINERA
+    cm = CM
+    g_pas = GPAS
+  }
+  forsec cellsecs {
+    Ra = RA
+    cm = CM * (1 + SAF)
+    g_pas = GPAS * (1 + SAF)
+  }
+  recalc()
+}
+
+setbiophys()
+
+proc setgeom() {
+  tgeom()
+  recalc()
+}
+
+setgeom()
+
+///// for control of spine location
+
+load_file("spineloc.hoc")
+
+///// Control panel
+
+objref hbox, g
+hbox = new HBox()
+hbox.intercept(1)	//all following creations go into the "hbox" box
+
+// leftmost panel:  model cell params
+xpanel("")
+xlabel(CELLSTR)
+xbutton("Run & Analyze","arun()")
+xlabel("g_pas must be >= 1e-9")
+// xlabel("Frequency and peak gsyn must be >= 0")
+xlabel("Peak gsyn must be >= 0")
+xlabel("Neck diam and length must be >= 0.01")
+xlabel("All others must be >= 0.1")
+xlabel("Cell parameters:")
+xvalue("Ra (ohm cm)","RA", 1,"RA=forcege(RA,0.1) setbiophys()", 0, 1 )
+xvalue("cm (uf/cm2)","CM", 1,"CM=forcege(CM,0.1) setbiophys()", 0, 1 )
+xvalue("g_pas (S/cm2)","GPAS", 1,"GPAS=forcege(GPAS,1e-9) setbiophys()", 0, 1 )
+xvalue("spine area factor (>=0)","SAF", 1,"SAF=forcege(SAF,0) setbiophys()", 0, 1 )
+xlabel("===========")
+xvalue("Peak gsyn (uS)","WT", 1,"WT=forcege(WT,0) nc.weight=WT", 0, 1 )
+xlabel("Spine parameters:")
+xvalue("Ra (ohm cm)","SPINERA", 1,"SPINERA=forcege(SPINERA,0.1) setbiophys()", 0, 1 )
+xvalue("Neck L","NECKL", 1,"NECKL=forcege(NECKL,0.01) setgeom()", 0, 1 )
+xvalue("Neck diam","NECKDIAM", 1,"NECKDIAM=forcege(NECKDIAM,0.01) setgeom()", 0, 1 )
+xlabel("===========")
+xlabel("Calculated values")
+xvalue("Rspine (megohm)","Rspine")
+// xvalue("tau_m (ms)", "0.001*CM/GPAS")
+xvalue("tau_m (ms)", "tau_m")
+xlabel("===========")
+xlabel("Normalized Zin and PSP amplitude")
+xvalue("Frequency (Hz)","FREQ", 1,"FREQ=forcege(FREQ,1) scs(FREQ) update_maxzin()", 0, 1 )
+xvalue("Max Zin (megohm)", "MAX_ZIN")
+xbutton("Click to show on cell", "plotnshapes()")
+xlabel("===========")
+xlabel("Spine location")
+xbutton("Where is mark?", "saywhere()")
+xbutton("Put spine at the mark", "moveto()")
+// xbutton("Run in this section", "sref.sec overthis()")
+// xbutton("Run over path from soma", "forsec pfrn overthis()")
+// xbutton("Generate figure", "setplotsalongpath()  run()  gvt.exec_menu(\"View = plot\")")
+xbutton("Generate figure", "genfig()")
+xbutton("Restore path colors", "pathcolors()")
+xpanel()
+
+hbox.intercept(0)	//ends intercept mode
+hbox.map("Controls", 652, 25, 290, 790) //draw the box and its contents
+
+// to be done:
+// add controls for specifying the style and size of the node marks
+

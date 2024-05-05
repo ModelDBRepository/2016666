@@ -1,0 +1,30 @@
+objectvar save_window_, rvp_
+objectvar scene_vector_[8]
+objectvar ocbox_, ocbox_list_, scene_, scene_list_
+{ocbox_list_ = new List()  scene_list_ = new List()}
+
+//Begin PointProcessManager
+{
+load_file("pointman.hoc")
+}
+{
+soma ocbox_ = new PointProcessManager(0)
+}
+{object_push(ocbox_)}
+{
+mt.select("Loc") i = mt.selected()
+ms[i] = new MechanismStandard("Loc")
+mt.select("Loc") i = mt.selected() maction(i)
+hoc_ac_ = 0.5
+sec.sec move() d1.flip_to(0)
+}
+{object_pop() doNotify()}
+{
+ocbox_ = ocbox_.v1
+ocbox_.map("PointProcessManager", 450, 475, 208.32, 316.8)
+}
+objref ocbox_
+//End PointProcessManager
+
+objectvar scene_vector_[1]
+{doNotify()}

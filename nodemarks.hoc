@@ -1,0 +1,67 @@
+// $Id: nodemarks.hoc,v 1.1 2015/09/30 05:18:57 ted Exp ted $
+
+/*
+nodemarks.hoc
+template for a set of sections used to mark locations of internal nodes
+based on subtree.hoc
+
+$o1 SectionList that contans the sections whose internal nodes are to be marked.
+$2  "+" for + shaped marks, anything else gets x shaped marks
+$3  Length of each arm of the + or x mark.
+
+Note for possible future use:
+delete_section() deletes currently accessed section
+*/
+
+begintemplate NodeMarks
+public mark, num
+create mark[1]
+num = 1
+plus = 1
+
+proc init() { local ii, delta
+  num = 0
+  forsec $o1 num+=nseg
+  create mark[num]
+
+  // set geometry
+  plus = (strcmp($s2, "+") == 0) // + marks
+
+  if (plus == 1) { // + marks
+    for ii=0,num-1 mark[ii] {
+      pt3dclear()
+      pt3dadd(0,0,0,1)
+      pt3dadd($3,0,0,1)
+      pt3dadd(-$3,0,0,1)
+      pt3dadd(0,0,0,1)
+      pt3dadd(0,$3,0,1)
+      pt3dadd(0,-$3,0,1)
+    }
+  } else { // x marks
+    delta = $3/sqrt(2)
+    for ii=0,num-1 mark[ii] {
+      pt3dclear()
+      pt3dadd(0,0,0,1)
+      pt3dadd(delta,delta,0,1)
+      pt3dadd(-delta,-delta,0,1)
+      pt3dadd(0,0,0,1)
+      pt3dadd(-delta,delta,0,1)
+      pt3dadd(delta,-delta,0,1)
+    }
+  }
+
+  // connect to internal nodes of $o1
+  ii = 0
+  forsec $o1 for (x,0) {
+    connect mark[ii](0), x
+    ii+=1
+  }
+
+  // set marks biophysical params so they don't affect simulation
+  for ii=0,num-1 mark[ii] {
+    Ra = 1e9
+    cm = 1e-9
+  }
+}
+endtemplate NodeMarks
+
